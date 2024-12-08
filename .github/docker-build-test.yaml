@@ -1,0 +1,147 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches:
+      - main
+      - 'ST-**'
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+  release:
+    types: [published, unpublished, created, edited, deleted]
+
+permissions:
+  contents: read
+  packages: write
+  actions: read
+  # Required for Dependabot
+  pull-requests: write
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    # Allow Dependabot to run tests
+    if: (github.actor == 'dependabot[bot]') || (github.actor != 'dependabot[bot]')
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: 'pip'
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          buildkitd-flags: --debug
+
+      - name: Log in to GitHub Container Registry
+        # Skip registry login for Dependabot PRs as they can't access secrets
+        if: github.actor != 'dependabot[bot]'
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}/status-tiles-test
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=long
+            type=raw,value=latest,enable=${{ github.ref == format('refs/heads/{0}', 'main') }}
+
+      - name: Build test image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          target: testing
+          # Only push if not Dependabot
+          push: ${{ github.actor != 'dependabot[bot]' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: |
+            type=registry,ref=ghcr.io/${{ github.repository }}/status-tiles-test:cache
+            type=gha,scope=${{ github.workflow }}
+          cache-to: |
+            type=registry,ref=ghcr.io/${{ github.repository }}/status-tiles-test:cache,mode=max
+            type=gha,scope=${{ github.workflow }},mode=max
+
+      - name: Run tests with coverage
+        env:
+          COVERAGE: 85
+          IMAGE_TAG: ${{ steps.meta.outputs.tags }}
+        run: |
+          echo "Required coverage: ${{ env.COVERAGE }}%"
+          docker run --rm \
+            -e COVERAGE=${{ env.COVERAGE }} \
+            -e PYTHONPATH=/app \
+            ${{ env.IMAGE_TAG }}
+
+      - name: Generate coverage report
+        if: success()
+        run: |
+          container_id=$(docker create ${{ env.IMAGE_TAG }})
+          docker cp $container_id:/app/coverage_html_report ./coverage_html_report
+          docker rm $container_id
+          tar -czf coverage-html.tar.gz coverage_html_report
+
+      - name: Upload coverage report
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage-html.tar.gz
+          compression-level: 9
+          retention-days: 14
+
+      - name: Upload coverage to Codecov
+        if: success()
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./coverage_html_report/coverage.xml
+          fail_ci_if_error: true
+
+      # Auto-merge Dependabot PRs for minor/patch updates if tests pass
+      - name: Auto-merge Dependabot PR
+        if: success() && github.actor == 'dependabot[bot]'
+        run: |
+          gh pr merge --auto --merge "$PR_URL"
+        env:
+          PR_URL: ${{github.event.pull_request.html_url}}
+          GITHUB_TOKEN: ${{secrets.GITHUB_TOKEN}}
+
+  security:
+    runs-on: ubuntu-latest
+    # Allow Dependabot to run security checks
+    if: (github.actor == 'dependabot[bot]') || (github.actor != 'dependabot[bot]')
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Run Snyk to check for vulnerabilities
+        # Skip Snyk for Dependabot PRs as they can't access secrets
+        if: github.actor != 'dependabot[bot]'
+        uses: snyk/actions/python@master
+        env:
+          SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+        with:
+          args: --severity-threshold=high
+
+      - name: Run Trivy vulnerability scanner
+        uses: aquasecurity/trivy-action@master
+        with:
+          scan-type: 'fs'
+          format: 'table'
+          exit-code: '1'
+          ignore-unfixed: true
+          severity: 'CRITICAL,HIGH'

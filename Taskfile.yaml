@@ -1,0 +1,84 @@
+version: '3'
+
+vars:
+  PYTHON: python3
+  VENV: .venv
+  APP_NAME: status-tiles
+  VERSION: "0.1.0"
+
+tasks:
+  info:
+    cmds:
+      - echo "========================================"
+      - echo "App Name={{.APP_NAME}}"
+      - echo "Version={{.VERSION}}"
+      - echo "========================================"
+    silent: true
+
+  lint:
+    desc: Run linting
+    cmds:
+      - '{{.VENV}}/bin/ruff check .'
+
+  fmt:
+    desc: "Format code"
+    cmds:
+      - poetry run ruff format
+
+  test:
+    desc: Run tests with coverage
+    cmds:
+      - '{{.VENV}}/bin/pytest --cov=status_tiles tests/ --cov-report=term-missing'
+
+  run:
+    desc: Run development server
+    cmds:
+      - '{{.VENV}}/bin/uvicorn status_tiles.main:app --reload'
+
+  clean:
+    desc: Clean up generated files
+    cmds:
+      - rm -rf {{.VENV}} dist build *.egg-info .coverage .pytest_cache
+
+  docker:build:
+    desc: Build the production Docker image
+    cmds:
+      - docker build --target production -t status-tiles:latest .
+
+  docker:build-test:
+    desc: Build the testing Docker image
+    cmds:
+      - docker build --target testing -t status-tiles:test .
+
+  docker:test:
+    desc: Run unit tests inside the testing Docker container
+    depends_on:
+      - build-test
+    cmds:
+      - docker run --rm status-tiles:test
+
+  docker:run:
+    desc: Run Docker container
+    deps: [docker:build]
+    cmds:
+      - docker run -p 8000:8000 status-tiles:latest
+
+  compose:up:
+    desc: Start Docker Compose services
+    cmds:
+      - docker compose up --build
+
+  compose:down:
+    desc: Stop Docker Compose services
+    cmds:
+      - docker compose down
+
+  compose:logs:
+    desc: View Docker Compose logs
+    cmds:
+      - docker compose logs -f
+
+  compose:dev:
+    desc: Start Docker Compose services in development mode
+    cmds:
+      - docker compose -f docker-compose.yml -f docker-compose.dev.yml up --build
