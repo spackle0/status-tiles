@@ -9,8 +9,8 @@
 
 
 [![CI](https://github.com/spackle0/status-tiles/actions/workflows/docker-build-test.yaml/badge.svg)](https://github.com/johndoe/my-project/actions/workflows/ci.yml)
-[![Codecov](https://codecov.io/gh/spackle0/status-tiles/branch/main/graph/badge.svg)](https://codecov.io/gh/spackle0/status-tiles)
 [![codecov](https://codecov.io/gh/spackle0/status-tiles/graph/badge.svg?token=YJVD7W9Q37)](https://codecov.io/gh/spackle0/status-tiles)
+
 [![Snyk Security](https://snyk.io/test/github/spackle0/status-tiles/badge.svg)](https://snyk.io/test/github/spackle0/status-tiles)
 [![Dependencies Status](https://img.shields.io/badge/dependencies-up%20to%20date-brightgreen.svg)](https://github.com/spackle0/status-tiles/pulls?utf8=%E2%9C%93&q=is%3Apr%20author%3Aapp%2Fdependabot)
 
