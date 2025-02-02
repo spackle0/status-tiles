@@ -1,7 +1,7 @@
 import logging
 from functools import lru_cache
 from pathlib import Path
-from typing import Dict, Literal, Optional
+from typing import Dict, List, Literal, Optional
 
 import yaml
 from pydantic import BaseModel, field_validator
@@ -27,11 +27,13 @@ class RSSServiceConfig(BaseModel):
 
 class HTTPServiceConfig(BaseModel):
     name: str
-    url: str  # Could use HttpUrl type if you want URL validation
+    url: str
     method: Literal["GET", "POST", "PUT", "DELETE"] = "GET"
     timeout: int
     expected_status: int = 200
     headers: Optional[Dict[str, str]] = None
+    json_path: Optional[str] = None  # JSONPath expression to extract status
+    expected_values: Optional[List[str]] = None  # List of valid values for the status
 
 
 class ServiceConfig(BaseModel):
@@ -41,7 +43,9 @@ class ServiceConfig(BaseModel):
     polling_interval: int = 300
 
     @field_validator("config")
-    def validate_config_type(cls, v: Dict | RSSServiceConfig | HTTPServiceConfig, values: Dict) -> Dict:
+    def validate_config_type(
+        cls, v: Dict | RSSServiceConfig | HTTPServiceConfig, values: Dict
+    ) -> RSSServiceConfig | HTTPServiceConfig:  # Changed return type
         # This validates that the config matches the service type
         service_type = values.get("type")
 
@@ -60,9 +64,11 @@ class ServiceConfig(BaseModel):
         return v
 
 
-# Add this class method to AppConfig
 class AppConfig(BaseModel):
-    # ... existing AppConfig code ...
+    log: LogConfig = LogConfig()
+    services: List[ServiceConfig] = []  # Also making this more explicit
+
+    model_config = {"validate_default": True, "extra": "allow", "arbitrary_types_allowed": True}
 
     @classmethod
     def from_yaml(cls, path: Path | str) -> "AppConfig":
@@ -80,13 +86,26 @@ class AppConfig(BaseModel):
             YAMLError: If YAML parsing fails
         """
         path = Path(path)
-        if not path.exists():
+        # Ignore SonarQube false positive: Path.exists() is a no-argument method
+        # See: https://docs.python.org/3/library/pathlib.html#pathlib.Path.exists
+        if not path.exists():  # NOSONAR
             raise FileNotFoundError(f"Configuration file not found: {path}")
 
         with path.open() as f:
             config_data = yaml.safe_load(f)
+            if config_data is None:
+                config_data = {}
+            if "log" not in config_data:
+                config_data["log"] = LogConfig().model_dump()
 
         return cls.model_validate(config_data)
+
+    def __init__(self, **data):
+        if "services" not in data:
+            data["services"] = []
+        if "log" not in data:
+            data["log"] = LogConfig()
+        super().__init__(**data)
 
 
 @lru_cache()
