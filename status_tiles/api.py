@@ -27,6 +27,7 @@ async def lifespan(app: FastAPI):
     # Startup
     config = get_config()
     setup_logging(level=config.log.level, format=config.log.format)
+    # setup_logging(level="DEBUG", format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
     logger = logging.getLogger("status_tiles")
 
     config_path = Path("config.yml")

@@ -1,7 +1,7 @@
 import logging
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 
 import yaml
 from pydantic import BaseModel, field_validator
@@ -19,28 +19,93 @@ class LogConfig(BaseModel):
         return v.upper()
 
 
+class RSSServiceConfig(BaseModel):
+    name: str
+    feed_url: str  # Could use HttpUrl type if you want URL validation
+    timeout: int
+
+
+class HTTPServiceConfig(BaseModel):
+    name: str
+    url: str
+    method: Literal["GET", "POST", "PUT", "DELETE"] = "GET"
+    timeout: int
+    expected_status: int = 200
+    headers: Optional[Dict[str, str]] = None
+    json_path: Optional[str] = None  # JSONPath expression to extract status
+    expected_values: Optional[List[str]] = None  # List of valid values for the status
+
+
 class ServiceConfig(BaseModel):
     name: str
-    type: str
-    config: Dict[str, Any]
+    type: Literal["rss", "http"]
+    config: RSSServiceConfig | HTTPServiceConfig  # Union type for different configs
     polling_interval: int = 300
+
+    @field_validator("config")
+    def validate_config_type(
+        cls, v: Dict | RSSServiceConfig | HTTPServiceConfig, values: Dict
+    ) -> RSSServiceConfig | HTTPServiceConfig:  # Changed return type
+        # This validates that the config matches the service type
+        service_type = values.get("type")
+
+        if service_type == "rss" and not isinstance(v, RSSServiceConfig):
+            # If dict is passed, try to convert it
+            if isinstance(v, dict):
+                return RSSServiceConfig(**v)
+            raise ValueError("RSS service must use RSSServiceConfig")
+
+        if service_type == "http" and not isinstance(v, HTTPServiceConfig):
+            # If dict is passed, try to convert it
+            if isinstance(v, dict):
+                return HTTPServiceConfig(**v)
+            raise ValueError("HTTP service must use HTTPServiceConfig")
+
+        return v
 
 
 class AppConfig(BaseModel):
     log: LogConfig = LogConfig()
-    services: List[ServiceConfig] = []
+    services: List[ServiceConfig] = []  # Also making this more explicit
+
+    model_config = {"validate_default": True, "extra": "allow", "arbitrary_types_allowed": True}
 
     @classmethod
     def from_yaml(cls, path: Path | str) -> "AppConfig":
-        """Load configuration from YAML file"""
+        """Load configuration from YAML file.
+
+        Args:
+            path: Path to YAML configuration file
+
+        Returns:
+            AppConfig: Loaded configuration
+
+        Raises:
+            FileNotFoundError: If configuration file doesn't exist
+            ValidationError: If configuration is invalid
+            YAMLError: If YAML parsing fails
+        """
         path = Path(path)
-        if not path.exists():
+        # Ignore SonarQube false positive: Path.exists() is a no-argument method
+        # See: https://docs.python.org/3/library/pathlib.html#pathlib.Path.exists
+        if not path.exists():  # NOSONAR
             raise FileNotFoundError(f"Configuration file not found: {path}")
 
-        with open(path) as f:
+        with path.open() as f:
             config_data = yaml.safe_load(f)
+            if config_data is None:
+                config_data = {}
+            if "log" not in config_data:
+                config_data["log"] = LogConfig().model_dump()
 
-        return cls(**config_data)
+        return cls.model_validate(config_data)
+
+    def __init__(self, **data):
+        if "services" not in data:
+            data["services"] = []
+        if "log" not in data:
+            data["log"] = LogConfig()
+        super().__init__(**data)
 
 
 @lru_cache()

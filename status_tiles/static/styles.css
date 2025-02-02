@@ -1,10 +1,12 @@
 /* status_tiles/static/styles.css */
 :root {
-    --color-healthy: #10B981;
-    --color-unhealthy: #EF4444;
-    --color-unknown: #F59E0B;
+    --color-healthy: #059669;  /* Darker green */
+    --color-unhealthy: #DC2626;
+    --color-unknown: #D97706;
     --color-bg: #F3F4F6;
     --color-text: #1F2937;
+    --color-muted: #6B7280;
+    --color-border: #E5E7EB;
 }
 
 * {
@@ -31,87 +33,255 @@ header {
     text-align: center;
 }
 
+header h1 {
+    font-size: 2rem;
+    color: var(--color-text);
+}
+
 .status-grid {
+    width: 100%;
+    margin-bottom: 2rem;
+}
+
+.tiles-container {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
     gap: 1.5rem;
-    margin-bottom: 2rem;
+    width: 100%;
+}
+
+.loading {
+    text-align: center;
+    padding: 2rem;
+    color: var(--color-muted);
+    font-size: 1.125rem;
 }
 
 .status-tile {
     background: white;
-    border-radius: 0.5rem;
+    border-radius: 0.75rem;
     padding: 1.5rem;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-    transition: transform 0.2s, box-shadow 0.2s;
+    transition: all 0.2s ease-in-out;
+    border-top: 4px solid transparent;
 }
 
 .status-tile:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
 }
 
-.status-healthy {
-    border-left: 4px solid var(--color-healthy);
+.status-tile.status-healthy {
+    border-top-color: var(--color-healthy);
 }
 
-.status-unhealthy {
-    border-left: 4px solid var(--color-unhealthy);
+.status-tile.status-unhealthy {
+    border-top-color: var(--color-unhealthy);
 }
 
-.status-unknown {
-    border-left: 4px solid var(--color-unknown);
+.status-tile.status-unknown {
+    border-top-color: var(--color-unknown);
+}
+
+.tile-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.service-name {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--color-text);
+    margin: 0;
 }
 
 .status-indicator {
-    display: inline-block;
-    padding: 0.25rem 0.75rem;
+    display: inline-flex;
+    align-items: center;
+    padding: 0.375rem 0.75rem;
     border-radius: 9999px;
     font-size: 0.875rem;
-    font-weight: 500;
-    margin: 0.5rem 0;
+    font-weight: 600;
+    line-height: 1;
 }
 
-.status-healthy .status-indicator {
+.status-tile.status-healthy .status-indicator {
     background-color: rgba(16, 185, 129, 0.1);
     color: var(--color-healthy);
 }
 
-.status-unhealthy .status-indicator {
+.status-tile.status-unhealthy .status-indicator {
     background-color: rgba(239, 68, 68, 0.1);
     color: var(--color-unhealthy);
 }
 
-.status-unknown .status-indicator {
+.status-tile.status-unknown .status-indicator {
     background-color: rgba(245, 158, 11, 0.1);
     color: var(--color-unknown);
 }
 
+.status-tile .status-text-healthy {
+    color: var(--color-healthy);
+}
+
+.status-tile .status-text-unhealthy {
+    color: var(--color-unhealthy);
+}
+
+.status-tile .status-text-unknown {
+    color: var(--color-unknown);
+}
+
+.tile-body {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
 .last-checked {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
     font-size: 0.875rem;
-    color: #6B7280;
-    margin-bottom: 1rem;
+    color: var(--color-muted);
+}
+
+.icon {
+    color: var(--color-muted);
 }
 
 .details {
-    border-top: 1px solid #E5E7EB;
+    border-top: 1px solid var(--color-border);
     padding-top: 1rem;
-    margin-top: 1rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
 }
 
 .detail-item {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     font-size: 0.875rem;
-    margin-bottom: 0.5rem;
 }
 
 .detail-label {
-    color: #6B7280;
+    color: var(--color-muted);
+    font-weight: 500;
+}
+
+.detail-value {
+    color: var(--color-text);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+}
+
+.error-message {
+    color: var(--color-unhealthy);
+    font-weight: 500;
+}
+
+.incidents-section {
+    background-color: #FEF2F2;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.status-healthy .incidents-section {
+    background-color: #F0FDF4;
+}
+
+.incidents-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 600;
+    color: var(--color-unhealthy);
+    margin-bottom: 0.75rem;
+}
+
+.icon-alert {
+    stroke: var(--color-unhealthy);
+}
+
+.incident-item {
+    padding: 0.75rem;
+    background-color: white;
+    border-radius: 0.375rem;
+    margin-bottom: 0.75rem;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.incident-item:last-child {
+    margin-bottom: 0;
+}
+
+.incident-title {
+    font-weight: 500;
+    color: var(--color-text);
+    margin-bottom: 0.25rem;
+}
+
+.incident-date {
+    font-size: 0.75rem;
+    color: var(--color-muted);
+    margin-bottom: 0.5rem;
+}
+
+.incident-description {
+    font-size: 0.875rem;
+    color: var(--color-text);
+    margin-bottom: 0.5rem;
+    line-height: 1.4;
+}
+
+.incident-link {
+    display: inline-block;
+    font-size: 0.875rem;
+    color: var(--color-text);
+    text-decoration: none;
+    padding: 0.25rem 0;
+}
+
+.incident-link:hover {
+    color: var(--color-unhealthy);
 }
 
 footer {
     text-align: center;
     font-size: 0.875rem;
-    color: #6B7280;
+    color: var(--color-muted);
+    padding: 1rem 0;
+    border-top: 1px solid var(--color-border);
+    margin-top: 2rem;
+}
+
+@media (max-width: 640px) {
+    .container {
+        padding: 1rem;
+    }
+
+    header h1 {
+        font-size: 1.5rem;
+    }
+
+    .tiles-container {
+        grid-template-columns: 1fr;  /* Single column on mobile */
+    }
+
+    .status-tile {
+        padding: 1rem;
+    }
+
+    .tile-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .status-indicator {
+        align-self: flex-start;
+    }
 }

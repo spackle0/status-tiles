@@ -1,18 +1,67 @@
 <!-- status_tiles/templates/components/status_tile.html -->
-{% for service in services %}
-<div class="status-tile status-{{ service.status }}" id="service-{{ service.name|lower }}">
-    <h2>{{ service.name }}</h2>
-    <div class="status-indicator">{{ service.status.value|title }}</div>
-    <div class="last-checked">Last checked: {{ service.last_checked.strftime('%Y-%m-%d %H:%M:%S UTC') }}</div>
-    {% if service.details %}
-    <div class="details">
-        {% for key, value in service.details.items() %}
-        <div class="detail-item">
-            <span class="detail-label">{{ key|title }}:</span>
-            <span class="detail-value">{{ value }}</span>
+<div class="tiles-container">
+    {% for service in services %}
+    <div class="status-tile status-{{ service.status|lower }}" id="service-{{ service.name|lower }}">
+        <div class="tile-header">
+            <h2 class="service-name">{{ service.name }}</h2>
+            <span class="status-indicator status-text-{{ service.status|lower }}">{{ service.status.value|title }}</span>
         </div>
-        {% endfor %}
+
+        <div class="tile-body">
+            <div class="last-checked">
+                <svg class="icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <circle cx="12" cy="12" r="10"/>
+                    <path d="M12 6v6l4 2"/>
+                </svg>
+                {{ service.last_checked.strftime('%Y-%m-%d %H:%M:%S UTC') }}
+            </div>
+
+            {% if service.details %}
+            <div class="details">
+                {% if service.details.get('active_incidents') %}
+                <div class="incidents-section">
+                    <div class="incidents-header">
+                        <svg class="icon-alert" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 8v4M12 16h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                        <span>Active Incidents ({{ service.details.incident_count }})</span>
+                    </div>
+                    {% for incident in service.details.active_incidents %}
+                    <div class="incident-item">
+                        <div class="incident-title">{{ incident.title }}</div>
+                        <div class="incident-date">{{ incident.date }}</div>
+                        {% if incident.description %}
+                        <div class="incident-description">{{ incident.description }}</div>
+                        {% endif %}
+                        {% if incident.link %}
+                        <a href="{{ incident.link }}" class="incident-link" target="_blank">View details →</a>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+
+                {% for key, value in service.details.items() %}
+                    {% if key not in ['active_incidents', 'incident_count', 'error'] %}
+                    <div class="detail-item">
+                        <span class="detail-label">{{ key|replace('_', ' ')|title }}</span>
+                        <span class="detail-value">
+                            {% if key == 'response_time_ms' %}
+                                {{ value }}ms
+                            {% elif key == 'status_code' %}
+                                {{ value }}
+                            {% elif key == 'error' %}
+                                <span class="error-message">{{ value }}</span>
+                            {% else %}
+                                {{ value }}
+                            {% endif %}
+                        </span>
+                    </div>
+                    {% endif %}
+                {% endfor %}
+            </div>
+            {% endif %}
+        </div>
     </div>
-    {% endif %}
+    {% endfor %}
 </div>
-{% endfor %}
