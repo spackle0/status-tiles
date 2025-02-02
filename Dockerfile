@@ -2,13 +2,15 @@
 FROM python:3.12-slim AS base
 
 # Set environment variables for better Python behavior
-ENV PYTHONDONTWRITEBYTECODE 1
-ENV PYTHONUNBUFFERED 1
+ENV PYTHONDONTWRITEBYTECODE=1
+ENV PYTHONUNBUFFERED=1
 
 WORKDIR /app
 
 RUN apt-get update && apt-get install -y \
     curl \
+    gcc \
+    python3-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Install poetry using the official installer
@@ -24,8 +26,8 @@ COPY pyproject.toml poetry.lock ./
 RUN mkdir status_tiles && touch status_tiles/__init__.py
 
 # Install project dependencies
-RUN poetry config virtualenvs.create false \
-    && poetry install --no-interaction
+RUN poetry config virtualenvs.create false && \
+    poetry install --no-interaction
 
 # Copy application code
 COPY status_tiles ./status_tiles

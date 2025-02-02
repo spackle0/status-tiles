@@ -1,9 +1,8 @@
 import logging
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import List, Optional
 
-import yaml
 from pydantic import BaseModel, field_validator
 
 
@@ -19,19 +18,21 @@ class LogConfig(BaseModel):
         return v.upper()
 
 
+class RSSServiceConfig(BaseModel):
+    name: str
+    feed_url: str
+    timeout: int
+
 class ServiceConfig(BaseModel):
     name: str
     type: str
-    config: Dict[str, Any]  # Currently allows any values
+    config: RSSServiceConfig  # Now using a specific type instead of Dict[str, Any]
     polling_interval: int = 300
 
-    # Add validation for known config values:
-    @field_validator("config")
-    def validate_config(cls, v: Dict[str, Any]) -> Dict[str, Any]:
-        required_keys = {"url", "timeout"}  # example required keys
-        missing = required_keys - v.keys()
-        if missing:
-            raise ValueError(f"Missing required config keys: {missing}")
+    @field_validator("type")
+    def validate_service_type(cls, v: str) -> str:
+        if v not in ["rss"]:  # Add more types as needed
+            raise ValueError(f"Unsupported service type: {v}")
         return v
 
 
@@ -45,36 +46,9 @@ class AppConfig(BaseModel):
     }
 
     def __init__(self, **data):
-        super().__init__(**data)
         if 'services' not in data:
-            self.services = []
-
-    @classmethod
-    def from_yaml(cls, path: Path | str) -> "AppConfig":
-        """Load configuration from YAML file.
-
-        Args:
-            path: Path to YAML configuration file
-
-        Returns:
-            AppConfig: Loaded configuration
-
-        Raises:
-            FileNotFoundError: If configuration file doesn't exist
-            ValidationError: If configuration is invalid
-            YAMLError: If YAML parsing fails
-        """
-        path = Path(path)
-        # Ignore SonarQube false positive: Path.exists() is a no-argument method
-        # See: https://docs.python.org/3/library/pathlib.html#pathlib.Path.exists
-        if not path.exists(): # NOSONAR
-            raise FileNotFoundError(f"Configuration file not found: {path}")
-
-        with path.open() as f:
-            config_data = yaml.safe_load(f)
-
-        return cls.model_validate(config_data)
-
+            data['services'] = []
+        super().__init__(**data)
 
 @lru_cache()
 def get_config(config_path: Optional[Path | str] = None) -> AppConfig:
