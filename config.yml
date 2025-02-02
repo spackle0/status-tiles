@@ -24,3 +24,15 @@ services:
       feed_url: "https://www.cloudflarestatus.com/history.rss"
       timeout: 30
     polling_interval: 300
+
+  - name: "Datadog Status"
+    type: "http"
+    config:
+      name: "Datadog"
+      url: "https://status.datadoghq.com/api/v2/status.json"
+      method: "GET"
+      timeout: 30
+      expected_status: 200
+      headers:
+        Accept: "application/json"
+    polling_interval: 300

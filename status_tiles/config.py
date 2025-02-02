@@ -1,8 +1,9 @@
 import logging
 from functools import lru_cache
 from pathlib import Path
-from typing import List, Optional
+from typing import Dict, Literal, Optional
 
+import yaml
 from pydantic import BaseModel, field_validator
 
 
@@ -20,35 +21,73 @@ class LogConfig(BaseModel):
 
 class RSSServiceConfig(BaseModel):
     name: str
-    feed_url: str
+    feed_url: str  # Could use HttpUrl type if you want URL validation
     timeout: int
+
+
+class HTTPServiceConfig(BaseModel):
+    name: str
+    url: str  # Could use HttpUrl type if you want URL validation
+    method: Literal["GET", "POST", "PUT", "DELETE"] = "GET"
+    timeout: int
+    expected_status: int = 200
+    headers: Optional[Dict[str, str]] = None
+
 
 class ServiceConfig(BaseModel):
     name: str
-    type: str
-    config: RSSServiceConfig  # Now using a specific type instead of Dict[str, Any]
+    type: Literal["rss", "http"]
+    config: RSSServiceConfig | HTTPServiceConfig  # Union type for different configs
     polling_interval: int = 300
 
-    @field_validator("type")
-    def validate_service_type(cls, v: str) -> str:
-        if v not in ["rss"]:  # Add more types as needed
-            raise ValueError(f"Unsupported service type: {v}")
+    @field_validator("config")
+    def validate_config_type(cls, v: Dict | RSSServiceConfig | HTTPServiceConfig, values: Dict) -> Dict:
+        # This validates that the config matches the service type
+        service_type = values.get("type")
+
+        if service_type == "rss" and not isinstance(v, RSSServiceConfig):
+            # If dict is passed, try to convert it
+            if isinstance(v, dict):
+                return RSSServiceConfig(**v)
+            raise ValueError("RSS service must use RSSServiceConfig")
+
+        if service_type == "http" and not isinstance(v, HTTPServiceConfig):
+            # If dict is passed, try to convert it
+            if isinstance(v, dict):
+                return HTTPServiceConfig(**v)
+            raise ValueError("HTTP service must use HTTPServiceConfig")
+
         return v
 
 
+# Add this class method to AppConfig
 class AppConfig(BaseModel):
-    log: LogConfig = LogConfig()
-    services: List[ServiceConfig]
+    # ... existing AppConfig code ...
 
-    model_config = {
-        "validate_default": True,
-        "extra": "allow"
-    }
+    @classmethod
+    def from_yaml(cls, path: Path | str) -> "AppConfig":
+        """Load configuration from YAML file.
 
-    def __init__(self, **data):
-        if 'services' not in data:
-            data['services'] = []
-        super().__init__(**data)
+        Args:
+            path: Path to YAML configuration file
+
+        Returns:
+            AppConfig: Loaded configuration
+
+        Raises:
+            FileNotFoundError: If configuration file doesn't exist
+            ValidationError: If configuration is invalid
+            YAMLError: If YAML parsing fails
+        """
+        path = Path(path)
+        if not path.exists():
+            raise FileNotFoundError(f"Configuration file not found: {path}")
+
+        with path.open() as f:
+            config_data = yaml.safe_load(f)
+
+        return cls.model_validate(config_data)
+
 
 @lru_cache()
 def get_config(config_path: Optional[Path | str] = None) -> AppConfig:
