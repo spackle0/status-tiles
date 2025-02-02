@@ -1,121 +1,135 @@
 # config.yml
 # Configure the services you want to monitor
 log:
-  level: "INFO"
+ level: "INFO"
 services:
-  - name: "GitHub Status"
-    type: "rss"
-    config:
-      name: "GitHub"
-      feed_url: "https://www.githubstatus.com/history.rss"
-      timeout: 30
-      check_period_hours: 24
-      incident_keywords:
-        - "incident"
-        - "outage"
-        - "degraded"
-        - "issue"
-        - "maintenance"
-        - "investigating"
-        - "offline"
-        - "unavailable"
-    polling_interval: 300
+ - name: "GitHub Status"
+   type: "rss"
+   config:
+     name: "GitHub"
+     feed_url: "https://www.githubstatus.com/history.rss"
+     timeout: 30
+     check_period_hours: 48
+     incident_keywords:
+       - "incident"
+       - "disruption"
+       - "degraded"
+       - "investigating"
+       - "issues"
+       - "outage"
+     exclude_keywords:
+       - "resolved"
+       - "completed"
+   polling_interval: 300
 
-  - name: "AWS Status"
-    type: "rss"
-    config:
-      name: "AWS"
-      feed_url: "https://status.aws.amazon.com/rss/all.rss"
-      timeout: 30
-      check_period_hours: 24
-      incident_keywords:
-        - "[service disruption]"
-        - "[service issue]"
-        - "impaired"
-        - "degraded"
-        - "unavailable"
-        - "latency"
-        - "performance"
-        - "outage"
-        - "maintenance"
-        - "investigating"
-    polling_interval: 300
+ - name: "AWS Status"
+   type: "rss"
+   config:
+     name: "AWS"
+     feed_url: "https://status.aws.amazon.com/rss/all.rss"
+     timeout: 30
+     check_period_hours: 48
+     incident_keywords:
+       - "[service disruption]"
+       - "[service issue]"
+       - "impaired"
+       - "degraded"
+       - "unavailable"
+       - "increased error rates"
+       - "connectivity issues"
+       - "experiencing elevated"
+     exclude_keywords:
+       - "resolved"
+       - "[resolved]"
+       - "completed"
+   polling_interval: 300
 
-  - name: "CloudFlare Status"
-    type: "rss"
-    config:
-      name: "CloudFlare"
-      feed_url: "https://www.cloudflarestatus.com/history.rss"
-      timeout: 30
-      check_period_hours: 48  # Increased from 24 to 48 hours
-      incident_keywords:
-        - "investigating"
-        - "degraded performance"
-        - "outage"
-        - "issues"
-        - "incident"
-        - "connectivity"
-        - "network performance"
-        - "error"
-        - "delay"
-        - "offline"
-        - "unavailable"
-      exclude_keywords:
-        - "scheduled maintenance"
-        - "scheduled event"
-        - "completed"
-        - "resolved"
-        - "maintenance is currently in progress"
-      check_description: true  # Add this flag to also check description content
-    polling_interval: 300
+ - name: "CloudFlare Status"
+   type: "rss"
+   config:
+     name: "CloudFlare"
+     feed_url: "https://www.cloudflarestatus.com/history.rss"
+     timeout: 30
+     check_period_hours: 48
+     incident_keywords:
+       - "investigating"
+       - "degraded performance"
+       - "outage"
+       - "issues"
+       - "incident"
+       - "connectivity"
+       - "network performance"
+       - "error"
+       - "delay"
+       - "offline"
+       - "unavailable"
+     exclude_keywords:
+       - "scheduled maintenance"
+       - "scheduled event"
+       - "completed"
+       - "resolved"
+       - "maintenance is currently in progress"
+     check_description: true
+   polling_interval: 300
 
-  - name: "Datadog Status"
-    type: "http"
-    config:
-      name: "Datadog"
-      url: "https://status.datadoghq.com/api/v2/status.json"
-      method: "GET"
-      timeout: 30
-      expected_status: 200
-      headers:
-        Accept: "application/json"
-      response_key: "status.indicator"  # Changed from json_path to response_key
-      expected_values: ["none", "minor", "major", "critical"]
-    polling_interval: 300
+ - name: "Datadog Status"
+   type: "http"
+   config:
+     name: "Datadog"
+     url: "https://status.datadoghq.com/api/v2/status.json"
+     method: "GET"
+     timeout: 30
+     expected_status: 200
+     headers:
+       Accept: "application/json"
+     response_key: "status.indicator"
+     expected_values: ["none", "minor", "major", "critical"]
+   polling_interval: 300
 
-  # Additional reliable status pages you might want to add:
-  - name: "Azure Status"
-    type: "rss"
-    config:
-      name: "Azure"
-      feed_url: "https://status.azure.com/en-us/status/feed/"
-      timeout: 30
-      check_period_hours: 24
-      incident_keywords:
-        - "warning"
-        - "information"
-        - "incident"
-        - "outage"
-        - "investigating"
-        - "mitigating"
-        - "degraded"
-        - "maintenance"
-    polling_interval: 300
+ - name: "Azure Status"
+   type: "rss"
+   config:
+     name: "Azure"
+     feed_url: "https://status.azure.com/en-us/status/feed/"
+     timeout: 30
+     check_period_hours: 48
+     incident_keywords:
+       - "warning:"
+       - "advisory:"
+       - "rca -"
+       - "degraded"
+       - "connectivity"
+       - "impact"
+       - "outage"
+       - "experiencing issues"
+     exclude_keywords:
+       - "resolved"
+       - "mitigated"
+       - "information:"
+       - "planned maintenance"
+       - "completed"
+     check_description: true
+   polling_interval: 300
 
-  - name: "Google Cloud Status"
-    type: "rss"
-    config:
-      name: "Google Cloud"
-      feed_url: "https://status.cloud.google.com/en/feed.atom"
-      timeout: 30
-      check_period_hours: 24
-      incident_keywords:
-        - "incident"
-        - "outage"
-        - "disruption"
-        - "issue"
-        - "degraded"
-        - "maintenance"
-        - "investigating"
-        - "affected"
-    polling_interval: 300
+ - name: "Google Cloud Status"
+   type: "rss"
+   config:
+     name: "Google Cloud"
+     feed_url: "https://status.cloud.google.com/en/feed.atom"
+     timeout: 30
+     check_period_hours: 48
+     incident_keywords:
+       - "incident"
+       - "disruption"
+       - "issue"
+       - "degraded"
+       - "investigating"
+       - "affected"
+       - "service interruption"
+       - "service outage"
+     exclude_keywords:
+       - "resolved"
+       - "completed"
+       - "fixed"
+     check_description: true
+   polling_interval: 300
