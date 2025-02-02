@@ -1,5 +1,7 @@
 # config.yml
 # Configure the services you want to monitor
+log:
+  level: "INFO"
 services:
   - name: "GitHub Status"
     type: "rss"
